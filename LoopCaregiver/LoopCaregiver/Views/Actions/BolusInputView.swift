@@ -85,29 +85,33 @@ struct BolusInputView: View {
         Form {
             if let recommendedBolus = remoteDataSource.recommendedBolus {
                 LabeledContent {
-                    Text(LocalizationUtils.presentableStringFromBolusAmount(recommendedBolus))
-                    Text("U")
-                        .frame(width: unitFrameWidth)
+                    HStack {
+                        Text(LocalizationUtils.presentableStringFromBolusAmount(recommendedBolus))
+                        Text("U")
+                            .frame(width: unitFrameWidth)
+                    }
                 } label: {
                     Text("Recommended Bolus")
                 }
             }
             LabeledContent {
-                TextField(
-                    "0",
-                    text: $bolusAmount
-                )
-                .multilineTextAlignment(.trailing)
-                .keyboardType(.decimalPad)
-                .focused($bolusInputViewIsFocused)
-                .onAppear(perform: {
-                    bolusInputViewIsFocused = true
-                    if let recommendedBolus = remoteDataSource.recommendedBolus {
-                        bolusAmount = LocalizationUtils.presentableStringFromBolusAmount(recommendedBolus)
-                    }
-                })
-                Text("U")
-                    .frame(width: unitFrameWidth)
+                HStack {
+                    TextField(
+                        "0",
+                        text: $bolusAmount
+                    )
+                    .multilineTextAlignment(.trailing)
+                    .keyboardType(.decimalPad)
+                    .focused($bolusInputViewIsFocused)
+                    .onAppear(perform: {
+                        bolusInputViewIsFocused = true
+                        if let recommendedBolus = remoteDataSource.recommendedBolus {
+                            bolusAmount = LocalizationUtils.presentableStringFromBolusAmount(recommendedBolus)
+                        }
+                    })
+                    Text("U")
+                        .frame(width: unitFrameWidth)
+                }
             } label: {
                 Text("Bolus")
             }

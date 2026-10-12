@@ -90,18 +90,20 @@ struct CarbInputView: View {
     var carbEntryForm: some View {
         Form {
             LabeledContent {
-                TextField(
-                    "0",
-                    text: $carbInput
-                )
-                .multilineTextAlignment(.trailing)
-                .keyboardType(.decimalPad)
-                .focused($carbInputViewIsFocused)
-                .onAppear(perform: {
-                    carbInputViewIsFocused = true
-                })
-                Text("g")
-                    .frame(width: unitFrameWidth)
+                HStack {
+                    TextField(
+                        "0",
+                        text: $carbInput
+                    )
+                    .multilineTextAlignment(.trailing)
+                    .keyboardType(.decimalPad)
+                    .focused($carbInputViewIsFocused)
+                    .onAppear(perform: {
+                        carbInputViewIsFocused = true
+                    })
+                    Text("g")
+                        .frame(width: unitFrameWidth)
+                }
             } label: {
                 Text("Amount Consumed")
             }
@@ -210,15 +212,17 @@ struct CarbInputView: View {
             }
             
             LabeledContent {
-                TextField(
-                    "",
-                    text: $absorption
-                )
-                .multilineTextAlignment(.trailing)
-                .keyboardType(.decimalPad)
-                .focused($absorptionInputFieldIsFocused)
-                Text("hr")
-                    .frame(width: unitFrameWidth)
+                HStack {
+                    TextField(
+                        "",
+                        text: $absorption
+                    )
+                    .multilineTextAlignment(.trailing)
+                    .keyboardType(.decimalPad)
+                    .focused($absorptionInputFieldIsFocused)
+                    Text("hr")
+                        .frame(width: unitFrameWidth)
+                }
             } label: {
                 Text("Absorption Time")
             }

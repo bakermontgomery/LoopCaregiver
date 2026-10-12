@@ -14,7 +14,6 @@ disabled_rules:
   - anyobject_protocol
   - closure_body_length
   - conditional_returns_on_newline
-  - contrasted_opening_brace
   - convenience_type
   - discouraged_optional_collection
   - explicit_acl

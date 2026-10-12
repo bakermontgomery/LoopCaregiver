@@ -53,6 +53,8 @@ struct HomeView: View {
             ToolbarItem(placement: .topBarLeading) {
                 // Use separate view to avoid the entire body from updating when remoteDataSource.updating changes
                 ToolbarButtonView(remoteDataSource: remoteDataSource, glucoseTimelineEntry: glucoseTimelineEntry)
+                // Workaround for iOS 26 Beta issue FB19330113
+                    .id(glucoseTimelineEntry)
             }
         }
         .onChange(of: scenePhase, { _, _ in
@@ -104,6 +106,7 @@ struct HomeView: View {
     struct ToolbarButtonView: View {
         var remoteDataSource: RemoteDataServiceManager
         var glucoseTimelineEntry: GlucoseTimeLineEntry
+        
         var body: some View {
             Button(action: {
                 Task {
@@ -115,7 +118,8 @@ struct HomeView: View {
                     case .success(let glucoseTimelineValue):
                         LatestGlucoseRowView(glucoseValue: glucoseTimelineValue)
                     case .failure:
-                        Text("")
+                        // Workaround: Empty text for iOS 26 Beta issue FB19330113
+                        Text("                                     ")
                     }
                     ProgressView()
                         .opacity(remoteDataSource.updating ? 1.0 : 0.0)
@@ -185,10 +189,13 @@ struct HomeView: View {
 #Preview {
     let composer = ServiceComposerPreviews()
     return NavigationStack {
-        let looper = composer.accountServiceManager.selectedLooper!
-        let looperService = composer.accountServiceManager.createLooperService(
-            looper: looper
-        )
-        HomeView(connectivityManager: composer.watchService, accountService: composer.accountServiceManager, looperService: looperService)
+        if let looper = try? composer.accountServiceManager.getLoopers().first {
+            let looperService = composer.accountServiceManager.createLooperService(
+                looper: looper
+            )
+            HomeView(connectivityManager: composer.watchService, accountService: composer.accountServiceManager, looperService: looperService)
+        } else {
+            Text("No looper!")
+        }
     }
 }

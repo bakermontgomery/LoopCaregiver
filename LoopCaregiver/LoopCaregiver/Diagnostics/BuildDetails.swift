@@ -69,7 +69,7 @@ class BuildDetails {
         guard
             let profilePath = Bundle.main.path(forResource: "embedded", ofType: "mobileprovision"),
             let profileData = try? Data(contentsOf: URL(fileURLWithPath: profilePath)),
-            let profileNSString = NSString(data: profileData, encoding: String.Encoding.ascii.rawValue)
+            let profileNSString = String(data: profileData, encoding: .ascii)
         else {
             print(
                 "WARNING: Could not find or read `embedded.mobileprovision`. If running on Simulator, there are no provisioning profiles."
@@ -82,7 +82,7 @@ class BuildDetails {
               let match = regex.firstMatch(
                 in: profileNSString as String,
                 options: [],
-                range: NSRange(location: 0, length: profileNSString.length)
+                range: NSRange(location: 0, length: profileNSString.count)
               ),
               let range = Range(match.range(at: 1), in: profileNSString as String)
         else {
@@ -90,7 +90,7 @@ class BuildDetails {
             return nil
         }
 
-        let dateString = String(profileNSString.substring(with: NSRange(range, in: profileNSString as String)))
+        let dateString = String(profileNSString[range])
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'"
         dateFormatter.locale = Locale(identifier: "en_US_POSIX")
