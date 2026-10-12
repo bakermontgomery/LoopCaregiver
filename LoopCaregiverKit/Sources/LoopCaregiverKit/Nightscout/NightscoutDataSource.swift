@@ -97,7 +97,7 @@ public class NightscoutDataSource: ObservableObject, RemoteDataServiceProvider {
     }
 
     static func fetchLookAheadInterval() -> TimeInterval {
-        return 60 * 60
+        return 60 * 60 * 4
     }
 
     func fetchInterval() -> DateInterval {
