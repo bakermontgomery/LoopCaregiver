@@ -75,7 +75,7 @@ public class NightscoutDataSource: ObservableObject, RemoteDataServiceProvider {
 
     public func fetchLatestDeviceStatus() async throws -> DeviceStatus? {
         let result = try await withCheckedThrowingContinuation({ continuation in
-            let fetchInterval = DateInterval(start: fetchEndDate().addingTimeInterval(-60 * 60 * 2), end: fetchEndDate())
+            let fetchInterval = DateInterval(start: nowDate().addingTimeInterval(-60 * 60 * 2), end: fetchEndDate())
             nightscoutUploader.fetchDeviceStatus(dateInterval: fetchInterval) { result in
                 continuation.resume(with: result)
             }
