@@ -31,7 +31,7 @@ struct CarbInputView: View {
     private let minAbsorptionTimeInHours = 0.5
     private let maxAbsorptionTimeInHours = 8.0
     private let maxPastCarbEntryHours = 12
-    private let maxFutureCarbEntryHours = 1
+    private let maxFutureCarbEntryHours = 4
     private let unitFrameWidth: CGFloat = 20.0
     
     var body: some View {
