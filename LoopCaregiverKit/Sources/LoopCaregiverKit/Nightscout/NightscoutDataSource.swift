@@ -135,6 +135,7 @@ public class NightscoutDataSource: ObservableObject, RemoteDataServiceProvider {
 
     public func deliverCarbs(amountInGrams: Double, absorptionTime: TimeInterval, consumedDate: Date) async throws {
         // TODO: Ensure you get a valid OTP (non-empty String)
+        await waitForFreshOTPIfNeeded()
         if settings.remoteCommands2Enabled {
             let action = NSRemoteAction.carbs(amountInGrams: amountInGrams, absorptionTime: absorptionTime, startDate: consumedDate)
             let commandPayload = createPendingCommand(action: action)
@@ -146,6 +147,7 @@ public class NightscoutDataSource: ObservableObject, RemoteDataServiceProvider {
 
     public func deliverBolus(amountInUnits: Double) async throws {
         // TODO: Ensure you get a valid OTP (non-empty String)
+        await waitForFreshOTPIfNeeded()
         if settings.remoteCommands2Enabled {
             let action = NSRemoteAction.bolus(amountInUnits: amountInUnits)
             let commandPayload = createPendingCommand(action: action)
@@ -202,11 +204,70 @@ public class NightscoutDataSource: ObservableObject, RemoteDataServiceProvider {
     }
 
     public func fetchRecentCommands() async throws -> [RemoteCommand] {
+        let commands: [RemoteCommand]
         if settings.remoteCommands2Enabled {
-            return try await nightscoutUploader.fetchRemoteCommands(earliestDate: fetchInterval().start, commandState: nil).compactMap({ try? $0.toRemoteCommand() })
+            commands = try await nightscoutUploader.fetchRemoteCommands(earliestDate: fetchInterval().start, commandState: nil).compactMap({ try? $0.toRemoteCommand() })
+        } else {
+            commands = try await fetchNotes()
+                .compactMap({ $0.toRemoteCommand() })
         }
-        return try await fetchNotes()
-            .compactMap({ $0.toRemoteCommand() })
+        retryOTPExpiredCommandsIfNeeded(commands)
+        return commands
+    }
+
+    // MARK: - OTP freshness + one automatic retry on an expired-password rejection
+
+    /// One-time passwords rotate every 30 seconds and Loop accepts only the
+    /// last two. If a command is sent in the final seconds of a step, normal
+    /// delivery delay can age its password out before Loop processes it, so
+    /// when a step is nearly over, wait for the next password first.
+    private func waitForFreshOTPIfNeeded() async {
+        let step: TimeInterval = 30
+        let remaining = step - Date().timeIntervalSince1970.truncatingRemainder(dividingBy: step)
+        guard remaining < 10 else { return }
+        try? await Task.sleep(nanoseconds: UInt64((remaining + 0.5) * 1_000_000_000))
+    }
+
+    /// If a recent bolus/carbs command failed only because its one-time
+    /// password expired ("Only the last 2 passwords are accepted"), Loop did
+    /// not act on it, so resend the same command once with a fresh password.
+    /// Each failed command is retried at most once, ever.
+    private func retryOTPExpiredCommandsIfNeeded(_ commands: [RemoteCommand]) {
+        let defaultsKey = "OTPExpiredRetriedCommandIDs"
+        var retriedIDs = Set(UserDefaults.standard.stringArray(forKey: defaultsKey) ?? [])
+
+        for command in commands {
+            guard case .error = command.status.state else { continue }
+            let message = command.status.message
+            guard message.localizedCaseInsensitiveContains("last 2 passwords"),
+                  message.localizedCaseInsensitiveContains("expired")
+            else { continue }
+            // Only retry fresh failures, and only once per command.
+            guard Date().timeIntervalSince(command.createdDate) < 15 * 60 else { continue }
+            guard !retriedIDs.contains(command.id) else { continue }
+
+            switch command.action {
+            case let .bolusEntry(action):
+                retriedIDs.insert(command.id)
+                Task {
+                    try? await self.deliverBolus(amountInUnits: action.amountInUnits)
+                }
+            case let .carbsEntry(action):
+                retriedIDs.insert(command.id)
+                Task {
+                    try? await self.deliverCarbs(
+                        amountInGrams: action.amountInGrams,
+                        absorptionTime: action.absorptionTime ?? 3 * 3600,
+                        consumedDate: action.startDate ?? Date()
+                    )
+                }
+            default:
+                continue
+            }
+        }
+
+        // Persist the retried set, capped so it cannot grow without bound.
+        UserDefaults.standard.set(Array(retriedIDs.suffix(50)), forKey: defaultsKey)
     }
 
     public func deleteAllCommands() async throws {
